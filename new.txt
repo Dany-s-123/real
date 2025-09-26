@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Electronics Quiz Game with Realistic Basket</title>
+  <style>
+    * {
+      margin: 0; padding: 0; box-sizing: border-box;
+      font-family: 'Poppins', sans-serif;
+    }
+    body {
+      overflow: hidden;
+      height: 100vh;
+      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+    }
+    body::before {
+      content: "";
+      position: absolute; top: -50%; left: -50%;
+      width: 200%; height: 200%;
+      background: radial-gradient(circle, rgba(255,255,255,0.1) 1%, transparent 10%);
+      background-size: 80px 80px;
+      animation: moveBg 20s linear infinite;
+      z-index: 0;
+    }
+    @keyframes moveBg {
+      from { transform: translate(0,0); }
+      to { transform: translate(40px,40px); }
+    }
+
+    #gameContainer {
+      position: relative;
+      width: 100%;
+      height: 100vh;
+      overflow: hidden;
+      z-index: 1;
+    }
+
+    #startScreen {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.75);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      z-index: 10;
+    }
+    #startScreen h1 {
+      font-size: 42px;
+      margin-bottom: 20px;
+      text-shadow: 0 0 10px rgba(255,255,255,0.6);
+    }
+    #startBtn {
+      padding: 12px 30px;
+      font-size: 20px;
+      background: linear-gradient(135deg, #ffcc00, #ff8800);
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      color: #333;
+      font-weight: bold;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      transition: transform 0.2s;
+    }
+    #startBtn:hover {
+      transform: scale(1.1);
+    }
+
+    #question {
+      position: absolute;
+      top: 20px;
+      width: 100%;
+      text-align: center;
+      font-size: 26px;
+      font-weight: bold;
+      color: #fff;
+      text-shadow: 2px 2px 5px rgba(0,0,0,0.8);
+      z-index: 5;
+      user-select: none;
+    }
+
+    .answer {
+      position: absolute;
+      top: -50px;
+      background: #fff;
+      color: #333;
+      padding: 10px 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+      text-align: center;
+      font-size: 18px;
+      user-select: none;
+      cursor: default;
+    }
+
+    #basketWrapper {
+      position: absolute;
+      bottom: 10px;
+      left: 0;
+      width: 200px;
+      height: 120px;
+      pointer-events: none;
+      z-index: 10;
+    }
+    #basketSVG {
+      width: 100%;
+      height: 100%;
+      user-select: none;
+    }
+
+    #scoreBoard {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      font-size: 18px;
+      color: #fff;
+      font-weight: bold;
+      text-shadow: 2px 2px 5px rgba(0,0,0,0.8);
+      z-index: 5;
+      user-select: none;
+    }
+
+    #gameOver {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.85);
+      color: #fff;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      text-align: center;
+      z-index: 20;
+      user-select: none;
+    }
+    #gameOver h1 {
+      font-size: 40px;
+      margin-bottom: 15px;
+    }
+    #gameOver button {
+      padding: 10px 25px;
+      background: linear-gradient(135deg, #ffcc00, #ff8800);
+      border: none;
+      font-size: 18px;
+      border-radius: 10px;
+      cursor: pointer;
+      margin-top: 15px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div id="gameContainer">
+    <div id="startScreen">
+      <h1>Electronics Quiz</h1>
+      <button id="startBtn">Start Game</button>
+    </div>
+
+    <div id="question">Question will appear here</div>
+
+    <div id="basketWrapper" aria-label="Basket">
+      <svg id="basketSVG" viewBox="0 0 200 120" xmlns="http://www.w3.org/2000/svg" >
+        <!-- Basket base -->
+        <ellipse cx="100" cy="100" rx="90" ry="30" fill="#c68642" />
+        <!-- Basket body -->
+        <path
+          d="M10,30
+             Q50,5 100,30
+             Q150,5 190,30
+             L190,90
+             Q150,115 100,90
+             Q50,115 10,90
+             Z"
+          fill="#d6a55f"
+          stroke="#8b5e2c"
+          stroke-width="4"
+        />
+        <!-- Woven pattern (vertical lines) -->
+        <g stroke="#b07e3a" stroke-width="2" opacity="0.7">
+          <line x1="30" y1="30" x2="30" y2="90" />
+          <line x1="50" y1="15" x2="50" y2="105" />
+          <line x1="70" y1="10" x2="70" y2="110" />
+          <line x1="90" y1="10" x2="90" y2="110" />
+          <line x1="110" y1="10" x2="110" y2="110" />
+          <line x1="130" y1="15" x2="130" y2="105" />
+          <line x1="150" y1="30" x2="150" y2="90" />
+          <line x1="170" y1="50" x2="170" y2="80" />
+        </g>
+        <!-- Woven pattern (horizontal lines) -->
+        <g stroke="#b07e3a" stroke-width="2" opacity="0.7">
+          <line x1="10" y1="40" x2="190" y2="40" />
+          <line x1="10" y1="60" x2="190" y2="60" />
+          <line x1="10" y1="75" x2="190" y2="75" />
+          <line x1="10" y1="85" x2="190" y2="85" />
+        </g>
+      </svg>
+    </div>
+
+    <div id="scoreBoard">Score: 0</div>
+
+    <div id="gameOver">
+      <h1>Game Over</h1>
+      <p id="finalScore"></p>
+      <button onclick="restartGame()">Play Again</button>
+    </div>
+  </div>
+
+<script>
+  const questions = [
+    { q: "Which component resists the flow of current?", answers: ["Resistor", "Capacitor", "Diode", "Inductor"], correct: "Resistor" },
+    { q: "Which component stores electric charge?", answers: ["Capacitor", "Resistor", "Transformer", "Switch"], correct: "Capacitor" },
+    { q: "Which allows current in only one direction?", answers: ["Diode", "LED", "Inductor", "Transistor"], correct: "Diode" },
+    { q: "Which emits light when powered?", answers: ["LED", "Diode", "Capacitor", "Inductor"], correct: "LED" },
+    { q: "Which creates magnetic field when current flows?", answers: ["Inductor", "Resistor", "Capacitor", "Diode"], correct: "Inductor" }
+  ];
+
+  const basketWrapper = document.getElementById("basketWrapper");
+  const questionEl = document.getElementById("question");
+  const gameContainer = document.getElementById("gameContainer");
+  const scoreBoard = document.getElementById("scoreBoard");
+  const gameOverScreen = document.getElementById("gameOver");
+  const finalScore = document.getElementById("finalScore");
+  const startScreen = document.getElementById("startScreen");
+  const startBtn = document.getElementById("startBtn");
+
+  let score = 0;
+  let currentQuestion = 0;
+  let fallingAnswers = [];
+  let gameRunning = false;
+  let spawnInterval, fallInterval;
+
+  function showQuestion() {
+    if (currentQuestion < questions.length) {
+      questionEl.textContent = questions[currentQuestion].q;
+    }
+  }
+
+  function spawnAnswersForQuestion() {
+  if (!gameRunning) return;
+  if (currentQuestion >= questions.length) return;
+
+  const current = questions[currentQuestion];
+
+  // Shuffle answers to randomize positions
+  const shuffled = [...current.answers].sort(() => Math.random() - 0.5);
+
+  shuffled.forEach((answerText, i) => {
+    const answer = document.createElement("div");
+    answer.classList.add("answer");
+    answer.textContent = answerText;
+
+    // Spread answers horizontally (4 columns)
+    const spacing = window.innerWidth / 5;
+    const x = spacing * (i + 1) - 50; // center each option
+    answer.style.left = `${x}px`;
+    answer.style.top = "-50px";
+
+    gameContainer.appendChild(answer);
+    fallingAnswers.push(answer);
+  });
+}
+
+  function moveBasket(e) {
+    if (!gameRunning) return;
+    let basketWidth = basketWrapper.offsetWidth;
+    let x = e.clientX - basketWidth / 2;
+    x = Math.max(0, Math.min(window.innerWidth - basketWidth, x));
+    basketWrapper.style.left = `${x}px`;
+  }
+
+  function spawnAnswersForQuestion() {
+  if (!gameRunning) return;
+  if (currentQuestion >= questions.length) return;
+
+  const current = questions[currentQuestion];
+
+  // Shuffle answers to randomize positions
+  const shuffled = [...current.answers].sort(() => Math.random() - 0.5);
+
+  shuffled.forEach((answerText, i) => {
+    const answer = document.createElement("div");
+    answer.classList.add("answer");
+    answer.textContent = answerText;
+
+    // Spread answers horizontally (4 columns)
+    const spacing = window.innerWidth / 5;
+    const x = spacing * (i + 1) - 50; // center each option
+    answer.style.left = `${x}px`;
+    answer.style.top = "-50px";
+
+    gameContainer.appendChild(answer);
+    fallingAnswers.push(answer);
+  });
+}
+
+function startGame() {
+  startScreen.style.display = "none";
+  gameRunning = true;
+  score = 0;
+  currentQuestion = 0;
+  scoreBoard.textContent = "Score: 0";
+  gameOverScreen.style.display = "none";
+
+  fallingAnswers.forEach(a => a.remove());
+  fallingAnswers = [];
+
+  showQuestion();
+  spawnAnswersForQuestion(); // spawn 4 answers for the first question
+
+  fallInterval = setInterval(() => {
+  if (!gameRunning) return;
+
+  let allRemoved = true; // flag to check if all options are gone
+
+  fallingAnswers.forEach((answer, index) => {
+    let top = parseFloat(answer.style.top || -50);
+    top += 4;
+    answer.style.top = `${top}px`;
+
+    const basketRect = basketWrapper.getBoundingClientRect();
+    const answerRect = answer.getBoundingClientRect();
+
+    // Check if option lands in basket center
+    if (
+      answerRect.bottom >= basketRect.top &&
+      answerRect.top < basketRect.bottom
+    ) {
+      const answerCenterX = (answerRect.left + answerRect.right) / 2;
+      const basketCenterX = (basketRect.left + basketRect.right) / 2;
+      const basketCenterZone = basketRect.width * 0.25;
+
+      if (
+        answerCenterX > basketCenterX - basketCenterZone / 2 &&
+        answerCenterX < basketCenterX + basketCenterZone / 2
+      ) {
+        // correct → increase score
+        if (answer.textContent === questions[currentQuestion].correct) {
+          score++;
+        }
+        scoreBoard.textContent = `Score: ${score}`;
+
+        // move to next question
+        currentQuestion++;
+        if (currentQuestion >= questions.length) {
+          endGame();
+        } else {
+          showQuestion();
+          fallingAnswers.forEach(a => a.remove());
+          fallingAnswers = [];
+          spawnAnswersForQuestion();
+        }
+      }
+    }
+
+    // Remove if falls below screen
+    if (top > window.innerHeight) {
+      answer.remove();
+      fallingAnswers.splice(index, 1);
+    }
+
+    if (fallingAnswers.length > 0) allRemoved = false;
+  });
+
+  // If all options removed and none were caught → next question
+  if (allRemoved && currentQuestion < questions.length) {
+    currentQuestion++;
+    if (currentQuestion >= questions.length) {
+      endGame();
+    } else {
+      showQuestion();
+      fallingAnswers.forEach(a => a.remove());
+      fallingAnswers = [];
+      spawnAnswersForQuestion();
+    }
+  }
+}, 30);
+  document.addEventListener("mousemove", moveBasket);
+}
+
+  function endGame() {
+    gameRunning = false;
+    clearInterval(spawnInterval);
+    clearInterval(fallInterval);
+    fallingAnswers.forEach(a => a.remove());
+    fallingAnswers = [];
+    gameOverScreen.style.display = "flex";
+    finalScore.textContent = `Your Score: ${score} / ${questions.length}`;
+  }
+
+  function restartGame() {
+    startGame();
+  }
+
+  startBtn.addEventListener("click", startGame);
+</script>
+</body>
+</html>

@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quiz with Scratch Card</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #142850, #27496d);
+      color: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      overflow: hidden;
+    }
+    #bg-video {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: -1;
+}
+    
+
+    .container {
+      background: rgba(0,0,0,0.6);
+      padding: 30px;
+      border-radius: 15px;
+      width: 90%;
+      max-width: 500px;
+      text-align: center;
+      box-shadow: 0 0 20px rgba(0,0,0,0.5);
+      position: relative;
+    }
+
+    .hidden { display: none; }
+
+    h2 { margin-bottom: 20px; }
+
+    input {
+      padding: 10px;
+      margin: 10px 0;
+      width: 80%;
+      border: none;
+      border-radius: 8px;
+      text-align: center;
+      font-size: 16px;
+    }
+
+    .start-btn {
+      margin-top: 15px;
+      padding: 10px 20px;
+      background: limegreen;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      color: white;
+    }
+
+    /* ===== Timer ===== */
+    .timer-container {
+      position: relative;
+      width: 220px;
+      height: 220px;
+      margin: 0 auto 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .segment {
+      position: absolute;
+      width: 2px;
+      height: 24px;
+      background: #222;
+      top: 90%;
+      left: 50%;
+      transform-origin: center -95px;
+      border-radius: 6px;
+      transition: background 0.3s, box-shadow 0.3s;
+    }
+
+    .segment.active.green {
+      background: limegreen;
+      box-shadow: 0 0 3px limegreen;
+    }
+
+    .segment.active.red {
+      background: red;
+      box-shadow: 0 0 6px red;
+    }
+
+    .time-box {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      color: white;
+    }
+
+    .time-number {
+      font-size: 64px;
+      font-weight: bold;
+      line-height: 1;
+    }
+
+    /* ===== Options ===== */
+    .options {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .options button {
+      flex: 1 1 45%;
+      margin: 10px;
+      padding: 12px;
+      background: #6c63ff;
+      border: none;
+      color: white;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: 0.3s;
+      font-size: 16px;
+    }
+
+    .options button:hover {
+      background: #5145cd;
+    }
+
+    /* ===== Scratch Card ===== */
+    #scratch-card-container {
+      position: relative;
+      width: 300px;
+      height: 150px;
+      margin: 20px auto;
+      background: #ccc;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    #scratch-result {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 20px;
+      font-weight: bold;
+      color: #000;
+      background: white;
+      z-index: 1;
+      padding: 10px;
+      text-align: center;
+    }
+
+    #scratch-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 2;
+      cursor: crosshair;
+    }
+
+    #continue-btn {
+      display: none;
+      margin-top: 20px;
+      padding: 10px 20px;
+      background: #ff9800;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 18px;
+    }
+  </style>
+</head>
+<body>
+
+  <video autoplay muted loop playsinline id="bg-video">
+    <source src="bgvedio4.mp4" type="video/mp4">
+    Your browser does not support the video tag.
+  </video>
+
+  <!-- Player Info Screen -->
+  <div class="container" id="player-info-screen">
+    <h2>Enter Your Details</h2>
+    <input type="text" id="player-name" placeholder="Name" required><br>
+    <input type="text" id="player-class" placeholder="Class" required><br>
+    <input type="text" id="player-whatsapp" placeholder="WhatsApp Number" required><br>
+    <button class="start-btn" onclick="goToInstructions()">Next</button>
+  </div>
+
+  <!-- Instructions Screen -->
+  <div class="container hidden" id="instructions-screen">
+    <h2>Game Instructions</h2>
+    <p>
+      1. You have <b>10 seconds</b> to answer each question.<br>
+      2. The timer circle will turn <b>red</b> in the last 3 seconds.<br>
+      3. Each correct answer = 1 point.<br>
+      4. Try to score at least 8 to win!<br>
+      5. Scratch card will reveal your result at the end.
+    </p>
+    <button class="start-btn" onclick="startQuiz()">Start Quiz</button>
+  </div>
+
+  <!-- Quiz Screen -->
+  <div class="container hidden" id="quiz-container">
+    <h2 id="question">Loading Question...</h2>
+
+    <!-- Timer -->
+    <div class="timer-container" id="timer">
+      <div class="time-box">
+        <div class="time-number" id="time">10</div>
+        <div class="time-label">TIME LEFT</div>
+      </div>
+    </div>
+
+    <!-- Options -->
+    <div class="options" id="options"></div>
+
+    <!-- Beep Sound -->
+    <audio id="beep-sound">
+      <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" type="audio/ogg">
+    </audio>
+  </div>
+
+  <!-- Scratch Card Result Screen -->
+  <div class="container hidden" id="scratch-card-screen">
+    <h2>Scratch to Reveal Your Result</h2>
+    <div id="scratch-card-container">
+      <div id="scratch-result"></div>
+      <canvas id="scratch-canvas"></canvas>
+    </div>
+    <button id="continue-btn" onclick="continueNext()">Continue</button>
+  </div>
+
+  <script>
+    // ===== Questions =====
+    const questions = [
+      { question: "Capital of France?", options: ["Paris", "London", "Rome", "Berlin"], answer: "Paris" },
+      { question: "Red Planet?", options: ["Venus", "Mars", "Jupiter", "Saturn"], answer: "Mars" },
+      { question: "5 + 3 = ?", options: ["5", "8", "9", "10"], answer: "8" },
+      { question: "Largest ocean?", options: ["Atlantic", "Indian", "Pacific", "Arctic"], answer: "Pacific" },
+      { question: "Gas plants use?", options: ["Oxygen", "Carbon Dioxide", "Nitrogen", "Helium"], answer: "Carbon Dioxide" },
+      { question: "Fastest land animal?", options: ["Cheetah", "Lion", "Horse", "Leopard"], answer: "Cheetah" },
+      { question: "Water formula?", options: ["H2O", "CO2", "NaCl", "O2"], answer: "H2O" },
+      { question: "Mammal that lays eggs?", options: ["Whale", "Platypus", "Dog", "Cat"], answer: "Platypus" },
+      { question: "Square root of 64?", options: ["6", "7", "8", "9"], answer: "8" },
+      { question: "Primary colors?", options: ["Red, Green, Blue", "Red, Yellow, Blue", "Pink, Purple, Blue", "Black, White, Gray"], answer: "Red, Yellow, Blue" }
+    ];
+
+    // DOM Elements
+    const playerInfoScreen = document.getElementById('player-info-screen');
+    const instructionsScreen = document.getElementById('instructions-screen');
+    const quizContainer = document.getElementById('quiz-container');
+    const scratchScreen = document.getElementById('scratch-card-screen');
+    const scratchResult = document.getElementById('scratch-result');
+    const scratchCanvas = document.getElementById('scratch-canvas');
+    const continueBtn = document.getElementById('continue-btn');
+
+    const questionElement = document.getElementById('question');
+    const optionsElement = document.getElementById('options');
+    const timeText = document.getElementById("time");
+    const beepSound = document.getElementById('beep-sound');
+    const timerContainer = document.getElementById("timer");
+
+    // Player info variables
+    let playerName = "";
+    let playerClass = "";
+    let playerWhatsApp = "";
+
+    // Timer
+    const totalTime = 10;
+    let timeLeft = totalTime;
+    let timer;
+
+    const totalSegments = 60;
+    const segments = [];
+    for (let i = 0; i < totalSegments; i++) {
+      const seg = document.createElement("div");
+      seg.classList.add("segment");
+      seg.style.transform = `rotate(${(i * (360 / totalSegments))}deg) translate(-50%, -50%)`;
+      timerContainer.appendChild(seg);
+      segments.push(seg);
+    }
+
+    let currentQuestion = 0;
+    let score = 0;
+
+    // Navigation
+    function goToInstructions() {
+      playerName = document.getElementById('player-name').value;
+      playerClass = document.getElementById('player-class').value;
+      playerWhatsApp = document.getElementById('player-whatsapp').value;
+
+      if (!playerName || !playerClass || !playerWhatsApp) {
+        alert("Please fill all the details.");
+        return;
+      }
+
+      playerInfoScreen.classList.add('hidden');
+      instructionsScreen.classList.remove('hidden');
+    }
+
+    function startQuiz() {
+      instructionsScreen.classList.add('hidden');
+      quizContainer.classList.remove('hidden');
+      loadQuestion();
+    }
+
+    // Load Question
+    function loadQuestion() {
+      if (currentQuestion < questions.length) {
+        const q = questions[currentQuestion];
+        questionElement.textContent = q.question;
+        optionsElement.innerHTML = "";
+
+        optionsElement.style.flexDirection = (currentQuestion % 2 === 0) ? "row" : "column";
+
+        q.options.forEach(option => {
+          const button = document.createElement('button');
+          button.textContent = option;
+          button.onclick = () => selectAnswer(option);
+          optionsElement.appendChild(button);
+        });
+
+        timeLeft = totalTime;
+        updateTimer();
+        clearInterval(timer);
+        timer = setInterval(countdown, 1000);
+      } else {
+        showScratchCard();
+      }
+    }
+
+    function countdown() {
+      if (timeLeft > 0) {
+        timeLeft--;
+
+        if ([3, 2, 1].includes(timeLeft)) {
+          beepSound.currentTime = 0;
+          beepSound.play();
+        }
+
+        updateTimer();
+      } else {
+        clearInterval(timer);
+        currentQuestion++;
+        loadQuestion();
+      }
+    }
+
+    function updateTimer() {
+      timeText.textContent = timeLeft;
+      const activeSegments = Math.floor((timeLeft / totalTime) * totalSegments);
+      let colorClass = timeLeft <= 3 ? "red" : "green";
+      timeText.style.color = (timeLeft <= 3 ? 'red' : 'white');
+
+      segments.forEach((seg, i) => {
+        seg.classList.remove("active", "green", "red");
+        if (i < activeSegments) seg.classList.add("active", colorClass);
+      });
+    }
+
+    function selectAnswer(selectedOption) {
+      clearInterval(timer);
+      if (selectedOption === questions[currentQuestion].answer) score++;
+      currentQuestion++;
+      loadQuestion();
+    }
+
+    // Show Scratch Card
+    function showScratchCard() {
+      quizContainer.classList.add('hidden');
+      scratchScreen.classList.remove('hidden');
+
+      // Set result text
+      scratchResult.textContent = score >= 8
+        ? `🎉 Congratulations ${playerName}! Move to Next`
+        : `Better Luck Next Time, ${playerName}`;
+
+      // Setup canvas for scratch effect
+      const ctx = scratchCanvas.getContext('2d');
+      scratchCanvas.width = 300;
+      scratchCanvas.height = 150;
+
+      ctx.fillStyle = "#999";
+      ctx.fillRect(0, 0, scratchCanvas.width, scratchCanvas.height);
+      ctx.globalCompositeOperation = 'destination-out';
+
+      let scratching = false;
+      let clearedPercentage = 0;
+
+      scratchCanvas.addEventListener('mousedown', () => scratching = true);
+      scratchCanvas.addEventListener('mouseup', () => scratching = false);
+      scratchCanvas.addEventListener('mousemove', (e) => {
+        if (scratching) {
+          const rect = scratchCanvas.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
+          ctx.beginPath();
+          ctx.arc(x, y, 20, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Check cleared area
+          const imageData = ctx.getImageData(0, 0, scratchCanvas.width, scratchCanvas.height);
+          let transparentPixels = 0;
+          for (let i = 3; i < imageData.data.length; i += 4) {
+            if (imageData.data[i] === 0) transparentPixels++;
+          }
+          clearedPercentage = (transparentPixels / (scratchCanvas.width * scratchCanvas.height)) * 100;
+
+          if (clearedPercentage > 50) {
+            continueBtn.style.display = 'block';
+          }
+        }
+      });
+    }
+
+    function continueNext() {
+      alert("Game Over. Thank you for playing!");
+    }
+  </script>
+</body>
+</html>

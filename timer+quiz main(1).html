@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quiz with Circular Timer</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #142850, #27496d);
+      color: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      overflow: hidden;
+    }
+
+    .container {
+      background: rgba(0,0,0,0.6);
+      padding: 30px;
+      border-radius: 15px;
+      width: 90%;
+      max-width: 500px;
+      text-align: center;
+      box-shadow: 0 0 20px rgba(0,0,0,0.5);
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 0.8s ease-in-out;
+    }
+
+    /* Flip animation */
+    .flip {
+      transform: rotateY(180deg);
+    }
+
+    h2 {
+      margin-bottom: 20px;
+    }
+
+    /* ===== Circular Segmented Timer ===== */
+    .timer-container {
+      position: relative;
+      width: 220px;
+      height: 220px;
+      margin: 0 auto 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .segment {
+      position: absolute;
+      width: 2px;
+      height: 24px;
+      background: #222;
+      top: 90%;
+      left: 50%;
+      transform-origin: center -95px;
+      border-radius: 6px;
+      transition: background 0.3s, box-shadow 0.3s;
+    }
+
+    .segment.active.green {
+      background: limegreen;
+      box-shadow: 0 0 3px limegreen;
+    }
+
+    .segment.active.red {
+      background: red;
+      box-shadow: 0 0 6px red;
+    }
+
+    /* Center text */
+    .time-box {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      color: white;
+    }
+
+    .time-number {
+      font-size: 64px;
+      font-weight: bold;
+      line-height: 1;
+    }
+
+    .time-label {
+      font-size: 16px;
+      letter-spacing: 2px;
+      margin-top: 5px;
+      color: #ddd;
+    }
+
+    /* ===== Options ===== */
+    .options button {
+      display: block;
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      background: #6c63ff;
+      border: none;
+      color: white;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: 0.3s;
+      font-size: 16px;
+    }
+
+    .options button:hover {
+      background: #5145cd;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .result {
+      font-size: 24px;
+      font-weight: bold;
+      color: #ffd700;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container" id="quiz-container">
+    <h2 id="question">Loading Question...</h2>
+
+    <!-- Segmented Timer -->
+    <div class="timer-container" id="timer">
+      <div class="time-box">
+        <div class="time-number" id="time">10</div>
+        <div class="time-label">TIME LEFT</div>
+      </div>
+    </div>
+
+    <!-- Options -->
+    <div class="options" id="options"></div>
+    <div id="result" class="hidden result"></div>
+
+    <!-- Beep Sound -->
+    <audio id="beep-sound">
+      <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" type="audio/ogg">
+    </audio>
+  </div>
+
+  <script>
+    // ===== Questions =====
+    const questions = [
+      { question: "What is the capital of France?", options: ["Paris", "London", "Rome", "Berlin"], answer: "Paris" },
+      { question: "Which planet is known as the Red Planet?", options: ["Venus", "Mars", "Jupiter", "Saturn"], answer: "Mars" },
+      { question: "What is 5 + 3?", options: ["5", "8", "9", "10"], answer: "8" },
+      { question: "Which is the largest ocean on Earth?", options: ["Atlantic", "Indian", "Pacific", "Arctic"], answer: "Pacific" },
+      { question: "What gas do plants breathe in?", options: ["Oxygen", "Carbon Dioxide", "Nitrogen", "Helium"], answer: "Carbon Dioxide" }
+    ];
+
+    // ===== DOM Elements =====
+    const questionElement = document.getElementById('question');
+    const optionsElement = document.getElementById('options');
+    const resultElement = document.getElementById('result');
+    const timeText = document.getElementById("time");
+    const beepSound = document.getElementById('beep-sound');
+    const quizContainer = document.getElementById('quiz-container');
+    const container = document.getElementById("timer");
+
+    // ===== Timer Settings =====
+    const totalTime = 10;
+    let timeLeft = totalTime;
+    let timer;
+
+    // Segmented ring
+    const totalSegments = 60;
+    const segments = [];
+    for (let i = 0; i < totalSegments; i++) {
+      const seg = document.createElement("div");
+      seg.classList.add("segment");
+      seg.style.transform = `rotate(${(i * (360 / totalSegments))}deg) translate(-50%, -50%)`;
+      container.appendChild(seg);
+      segments.push(seg);
+    }
+
+    let currentQuestion = 0;
+    let score = 0;
+
+    // ===== Load Question =====
+    function loadQuestion() {
+      if (currentQuestion < questions.length) {
+        const q = questions[currentQuestion];
+        questionElement.textContent = q.question;
+        optionsElement.innerHTML = "";
+
+        q.options.forEach(option => {
+          const button = document.createElement('button');
+          button.textContent = option;
+          button.onclick = () => selectAnswer(option);
+          optionsElement.appendChild(button);
+        });
+
+        timeLeft = totalTime;
+        updateTimer();
+        clearInterval(timer);
+        timer = setInterval(countdown, 1000);
+      } else {
+        showResult();
+      }
+    }
+
+    // ===== Countdown =====
+    function countdown() {
+      if (timeLeft > 0) {
+        timeLeft--;
+
+        // Beep at 3,2,1
+        if ([3, 2, 1].includes(timeLeft)) {
+          beepSound.currentTime = 0;
+          beepSound.play();
+        }
+
+        updateTimer();
+      } else {
+        clearInterval(timer);
+        flipToNextQuestion();
+      }
+    }
+
+    // ===== Update Timer =====
+    function updateTimer() {
+      timeText.textContent = timeLeft;
+
+      const activeSegments = Math.floor((timeLeft / totalTime) * totalSegments);
+
+      // normal state: green
+      let colorClass = "green";
+
+      // critical state (<=3 seconds): red
+      if (timeLeft <= 3) {
+        timeText.style.color = 'red';
+        colorClass = "red";
+      } else {
+        timeText.style.color = 'white';
+      }
+
+      segments.forEach((seg, i) => {
+        seg.classList.remove("active", "green", "red");
+        if (i < activeSegments) {
+          seg.classList.add("active", colorClass);
+        }
+      });
+    }
+
+    // ===== When User Selects an Answer =====
+    function selectAnswer(selectedOption) {
+      clearInterval(timer);
+      if (selectedOption === questions[currentQuestion].answer) {
+        score++;
+      }
+      flipToNextQuestion();
+    }
+
+    // ===== Flip Animation then Next Question =====
+    function flipToNextQuestion() {
+      quizContainer.classList.add('flip');
+      setTimeout(() => {
+        quizContainer.classList.remove('flip');
+        currentQuestion++;
+        loadQuestion();
+      }, 800); // match CSS transition
+    }
+
+    // ===== Show Final Result =====
+    function showResult() {
+      questionElement.classList.add('hidden');
+      optionsElement.classList.add('hidden');
+      document.querySelector('.timer-container').classList.add('hidden');
+      resultElement.classList.remove('hidden');
+      resultElement.textContent = `Quiz Completed! Your Score: ${score} / ${questions.length}`;
+    }
+
+    // ===== Start Quiz =====
+    loadQuestion();
+  </script>
+
+</body>
+</html>

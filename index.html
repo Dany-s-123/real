@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Quiz with Scratch Card</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #142850, #27496d);
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+    #bg-video {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: -1;
+    }
+    .container {
+      background: rgba(0, 0, 0, 0.6);
+      padding: 30px;
+      border-radius: 15px;
+      width: 90%;
+      max-width: 500px;
+      text-align: center;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    }
+    .hidden { display: none; }
+    input {
+      width: 80%;
+      padding: 10px;
+      margin: 10px 0;
+      border: none;
+      border-radius: 8px;
+      text-align: center;
+      font-size: 16px;
+    }
+    .start-btn {
+      padding: 10px 20px;
+      background: limegreen;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      color: white;
+      margin-top: 10px;
+    }
+    .options {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .options button {
+      flex: 1 1 45%;
+      margin: 10px;
+      padding: 12px;
+      background: #6c63ff;
+      border: none;
+      color: white;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .timer-container {
+      position: relative;
+      width: 220px;
+      height: 220px;
+      margin: 0 auto 20px;
+    }
+    .segment {
+      position: absolute;
+      width: 2px;
+      height: 24px;
+      background: #222;
+      top: 90%;
+      left: 50%;
+      transform-origin: center -95px;
+      border-radius: 6px;
+    }
+    .segment.active.green {
+      background: limegreen;
+      box-shadow: 0 0 3px limegreen;
+    }
+    .segment.active.red {
+      background: red;
+      box-shadow: 0 0 6px red;
+    }
+    .time-box {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+    }
+    .time-number {
+      font-size: 64px;
+      font-weight: bold;
+      color: white;
+    }
+    /* Scratch card */
+    #scratch-card-container {
+      position: relative;
+      width: 300px;
+      height: 150px;
+      margin: 20px auto;
+      background: #ccc;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    #scratch-result {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 20px;
+      font-weight: bold;
+      color: #000;
+      background: white;
+      z-index: 1;
+      padding: 10px;
+      text-align: center;
+    }
+    #scratch-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 2;
+      cursor: crosshair;
+    }
+    #continue-btn {
+      display: none;
+      margin-top: 20px;
+      padding: 10px 20px;
+      background: #ff9800;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 18px;
+    }
+  </style>
+</head>
+<body>
+
+<video autoplay muted loop playsinline id="bg-video">
+  <source src="bgvedio5.mp4" type="video/mp4">
+</video>
+
+<!-- Player Info Screen -->
+<div class="container" id="player-info-screen">
+  <h2>Enter Your Details</h2>
+  <input type="text" id="player-name" placeholder="Name" required><br>
+  <input type="text" id="player-class" placeholder="Class" required><br>
+  <input type="text" id="player-whatsapp" placeholder="WhatsApp Number" required><br>
+  <button class="start-btn" onclick="goToInstructions()">Next</button>
+</div>
+
+<!-- Instructions Screen -->
+<div class="container hidden" id="instructions-screen">
+  <h2>Game Instructions</h2>
+  <p>
+    1. You have <b>10 seconds</b> to answer each question.<br>
+    2. The timer will turn <b>red</b> in the last 3 seconds.<br>
+    3. Each correct answer = 1 point.<br>
+    4. Try to score at least 8 to win!<br>
+    5. Scratch card will reveal your result at the end.
+  </p>
+  <button class="start-btn" onclick="startQuiz()">Start Quiz</button>
+</div>
+
+<!-- Quiz Screen -->
+<div class="container hidden" id="quiz-container">
+  <h2 id="question">Loading Question...</h2>
+  <div class="timer-container" id="timer">
+    <div class="time-box">
+      <div class="time-number" id="time">10</div>
+    </div>
+  </div>
+  <div class="options" id="options"></div>
+  <audio id="beep-sound">
+    <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" type="audio/ogg">
+  </audio>
+</div>
+
+<!-- Scratch Card Result Screen -->
+<div class="container hidden" id="scratch-card-screen">
+  <h2>Scratch to Reveal Your Result</h2>
+  <div id="scratch-card-container">
+    <div id="scratch-result"></div>
+    <canvas id="scratch-canvas" width="300" height="150"></canvas>
+  </div>
+  <button id="continue-btn" onclick="continueNext()">Continue</button>
+</div>
+
+<script>
+  const questions = [
+    { question: "I measure electrical current in a circuit. What am I?", options: ["Voltmeter", "Ammeter", "Ohmmeter", "Wattmeter"], answer: "Ammeter" },
+    { question: "I’m a device that only allows current to flow in one direction. What am I?", options: ["Diode", "Transistor", "Capacitor", "Fuse"], answer: "Diode" },
+    { question: "I am the smallest unit of data storage that can hold a 0 or 1. What am I?", options: ["Byte", "Bit", "Nibble", "Word"], answer: "Bit"},
+    { question: "I oppose changes in current and my stored energy is in a magnetic field. What am I?", options: ["Capacitor", "Inductor", "Resistor", "Transformer"], answer: "Inductor"  },
+    { question: "I’m a data structure that follows FIFO order. What am I?", options: ["Stack", "Queue", "Tree", "Graph"], answer: "Queue" },
+    { question: "I detect faults and open a circuit when current exceeds a threshold to protect devices. What am I?", options: ["Thyristor", "Fuse or circuit breake", "Inductor", "Rectifier"], answer: "Fuse or circuit breake"  },
+    { question: "Which diagram shows shear force and bending moment?", options: ["Free-body", "Stress-strain", "SFD & BMD", "Block diagram"], answer: "SFD & BMD" },
+    { question: "In digital logic, which gate outputs 1 only when all inputs are 1?", options: ["OR", "NAND", "AND", "XOR"], answer: "AND" },
+    { question: "For metals, which property characterizes the stress at which permanent (plastic) deformation begins?", options: ["Ductility", "Hardness", "Yield strength", "Porosity"], answer: "Yield strength" },
+    { question: "Nyquist criterion is used to check what?", options: ["Power factor", "Stability", "Bandwidth", "Linearity"], answer: "Stability" }
+  ];
+
+  let currentQuestion = 0;
+  let quizScore = 0;  // ✅ quiz mark
+  let gameMark = 0;   // ✅ game mark
+  let timeLeft = 10;
+  let timer;
+  const totalSegments = 60;
+  const segments = [];
+
+  const nameInput = document.getElementById("player-name");
+  const classInput = document.getElementById("player-class");
+  const whatsappInput = document.getElementById("player-whatsapp");
+
+  const questionElement = document.getElementById("question");
+  const optionsElement = document.getElementById("options");
+  const timeText = document.getElementById("time");
+  const beepSound = document.getElementById("beep-sound");
+  const timerContainer = document.getElementById("timer");
+
+  for (let i = 0; i < totalSegments; i++) {
+    const seg = document.createElement("div");
+    seg.classList.add("segment");
+    seg.style.transform = `rotate(${(i * 360) / totalSegments}deg) translate(-50%, -50%)`;
+    timerContainer.appendChild(seg);
+    segments.push(seg);
+  }
+
+  function goToInstructions() {
+    if (!nameInput.value || !classInput.value || !whatsappInput.value) {
+      alert("Please fill all the details.");
+      return;
+    }
+    document.getElementById("player-info-screen").classList.add("hidden");
+    document.getElementById("instructions-screen").classList.remove("hidden");
+  }
+
+  function startQuiz() {
+    document.getElementById("instructions-screen").classList.add("hidden");
+    document.getElementById("quiz-container").classList.remove("hidden");
+    loadQuestion();
+  }
+
+  function loadQuestion() {
+    if (currentQuestion >= questions.length) return showScratchCard();
+
+    const q = questions[currentQuestion];
+    questionElement.textContent = q.question;
+    optionsElement.innerHTML = "";
+
+    q.options.forEach(option => {
+      const btn = document.createElement("button");
+      btn.textContent = option;
+      btn.onclick = () => checkAnswer(option);
+      optionsElement.appendChild(btn);
+    });
+
+    timeLeft = 15;
+    updateTimer();
+    clearInterval(timer);
+    timer = setInterval(countdown, 1000);
+  }
+
+  function checkAnswer(selected) {
+    clearInterval(timer);
+    if (selected === questions[currentQuestion].answer) quizScore++;
+    currentQuestion++;
+    loadQuestion();
+  }
+
+  function countdown() {
+    timeLeft--;
+    if ([3, 2, 1].includes(timeLeft)) {
+      beepSound.currentTime = 0;
+      beepSound.play();
+    }
+    updateTimer();
+    if (timeLeft <= 0) {
+      clearInterval(timer);
+      currentQuestion++;
+      loadQuestion();
+    }
+  }
+
+  function updateTimer() {
+    timeText.textContent = timeLeft;
+    const activeSegments = Math.floor((timeLeft / 10) * totalSegments);
+    const color = timeLeft <= 3 ? "red" : "green";
+    segments.forEach((seg, i) => {
+      seg.classList.remove("active", "green", "red");
+      if (i < activeSegments) seg.classList.add("active", color);
+    });
+  }
+
+  // ✅ Final scratch card + save result
+  function showScratchCard() {
+    document.getElementById("quiz-container").classList.add("hidden");
+    document.getElementById("scratch-card-screen").classList.remove("hidden");
+
+    // ✅ decide game mark (1 pass, 0 fail)
+    gameMark = (quizScore >= 8) ? 1 : 0;
+
+    // ✅ Save to sheet
+    saveResultToSheet();
+
+    const scratchResult = document.getElementById("scratch-result");
+    scratchResult.textContent = quizScore >= 8 
+      ? `🎉 Congratulations ${nameInput.value}! Move to Next` 
+      : `Better Luck Next Time, ${nameInput.value}`;
+
+    const canvas = document.getElementById("scratch-canvas");
+    const ctx = canvas.getContext("2d");
+    const width = canvas.width;
+    const height = canvas.height;
+    ctx.fillStyle = "#999";
+    ctx.fillRect(0, 0, width, height);
+    ctx.globalCompositeOperation = "destination-out";
+
+    let isDrawing = false;
+    let cleared = false;
+
+    function getPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      if (e.touches) {
+        return {
+          x: e.touches[0].clientX - rect.left,
+          y: e.touches[0].clientY - rect.top
+        };
+      }
+      return {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      };
+    }
+
+    function scratch(e) {
+      if (!isDrawing || cleared) return;
+      const pos = getPos(e);
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, 20, 0, Math.PI * 2);
+      ctx.fill();
+
+      const imageData = ctx.getImageData(0, 0, width, height);
+      let transparent = 0;
+      for (let i = 3; i < imageData.data.length; i += 4) {
+        if (imageData.data[i] === 0) transparent++;
+      }
+      if (transparent / (width * height) > 0.5) {
+        cleared = true;
+        document.getElementById("continue-btn").style.display = "block";
+      }
+    }
+
+    canvas.addEventListener("mousedown", () => isDrawing = true);
+    canvas.addEventListener("mouseup", () => isDrawing = false);
+    canvas.addEventListener("mousemove", scratch);
+
+    canvas.addEventListener("touchstart", () => isDrawing = true);
+    canvas.addEventListener("touchend", () => isDrawing = false);
+    canvas.addEventListener("touchmove", scratch);
+  }
+
+  function continueNext() {
+    if (quizScore >= 8) {
+      window.location.href = "basket-quiz.html";
+    } else {
+      alert("You need at least 8 correct answers to proceed.");
+    }
+  }
+
+  // ✅ Google Sheet saving function
+  function saveResultToSheet() {
+    const url = "https://script.google.com/macros/s/AKfycbxATtmLGT_-2MDHApzM3yUUkN-ql_1l1URrD5M_sI16c5RqtrIhyKMPfhroY7ao7VOa/exec"; // your deployed Apps Script /exec URL
+
+    const params = new URLSearchParams();
+    params.append('name', nameInput.value);
+    params.append('class', classInput.value);
+    params.append('whatsapp', whatsappInput.value);
+    params.append('quiz_mark', String(quizScore)); // ✅ quiz mark
+    params.append('game_mark', String(gameMark));  // ✅ game mark
+
+    fetch(url, {
+      method: 'POST',
+      mode: 'no-cors',
+      body: params
+    })
+    .then(() => console.log("Quiz + Game marks sent to Google Sheet"))
+    .catch(err => console.error("Fetch error:", err));
+  }
+</script>
+</body>
+</html>
