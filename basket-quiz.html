@@ -202,7 +202,7 @@ function startGame() {
     if(!gameRunning) return;
     fallingAnswers.forEach((answer, index) => {
       let top = parseFloat(answer.style.top || -50);
-      top += 4;
+      top += 6;
       answer.style.top = `${top}px`;
 
       const basketRect = basketWrapper.getBoundingClientRect();
@@ -272,3 +272,4 @@ startBtn.addEventListener("click", startGame);
 </script>
 </body>
 </html>
+
